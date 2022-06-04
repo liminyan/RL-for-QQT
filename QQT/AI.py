@@ -4,6 +4,7 @@ import pygame,time
 import random
 import Boom
 import config
+import view
  
 class AI_Player(object):
     """docstr ing for AI_Player"""
@@ -30,6 +31,39 @@ class AI_Player(object):
         self.first = time.time()
         self.space = time.time()
         self.key = 0
+        self.view = view.View(X,Y,Player_size)
+
+
+
+    def check_corss(self,x,y,op_rank):
+        # up down left right 1,2,3,4
+        have_boom,std_x,std_y = self.view.fix(self.center_x,self.center_y)
+        tr_x = x/self.Player_size 
+        tr_y = y/self.Player_size 
+        std_x /= self.Player_size
+        std_y /= self.Player_size
+        op = []
+        op.append([std_x ,std_y - 1])
+        op.append([std_x ,std_y + 1])
+        op.append([std_x - 1,std_y])
+        op.append([std_x + 1,std_y])
+        extern = 0
+        if op_rank == 1 or op_rank == 2:
+            res = abs(op[op_rank-1][1] - tr_y)
+            
+            if tr_x - int(tr_x) < 0.25 :
+                extern = self.view.map[int(std_x) - 1][int(op[op_rank - 1][1])]
+            elif tr_x - int(tr_x) > 0.75 :
+                extern = self.view.map[int(std_x) + 1][int(op[op_rank - 1][1])]
+        else:
+            if tr_y - int(tr_y) < 0.25 :
+                extern =  self.view.map[int(op[op_rank - 1][0])][int(std_y) - 1]
+            elif tr_y - int(tr_y) > 0.75 :
+                extern =  self.view.map[int(op[op_rank - 1][0])][int(std_y) + 1]
+            res = abs(op[op_rank-1][0] - tr_x)
+        return res < 0.8 and (self.view.map[int(op[op_rank-1][0])][int(op[op_rank-1][1])] or extern)
+
+
 
     def move(self):
 
@@ -39,7 +73,7 @@ class AI_Player(object):
 
         key = self.key
         if time.time() - self.first >=0.1:
-	        key = random.randint(0,9)
+	        key = random.randint(0,5)
 	        self.first = time.time()
 
         STOP = True
@@ -48,86 +82,80 @@ class AI_Player(object):
         RIGHT = False
         DOWN = False
         SPACE = False
-
         if key == 0:
             STOP = True
-
         if key == 1:
-            RIGHT = False
             LEFT = True
         if key == 2:
-            DOWN = False
             UP = True
-
         if key == 3:
             RIGHT = True
         if key == 4:
             DOWN = True
-
-        if key == 5:
-            LEFT = True
-            UP = True
-
-        if key == 6:
-            RIGHT = True
-            DOWN = True
-
-        if key == 7:
-            RIGHT = True
-            UP = True
-
-        if key == 8:
-            LEFT = True
-            DOWN = True
-
         self.key = key
-        if time.time() - self.space >=0.4 or key == 9:
-	        key = random.randint(0,9)
+        if time.time() - self.space >=0.4 or key == 5:
+	        key = random.randint(0,5)
 	        self.space = time.time() 
-
-        if key ==  9:
+        if key ==  5:
             SPACE = True
-        # if STOP:
-        #     return
 
-       
-        # keys=pygame.key.get_pressed()
-        if(RIGHT == True):
-            op = self.Move.move(pygame.K_RIGHT,self.Prox)    
-            self.x -= op[0]
-            self.y -= op[1]
-        if(DOWN == True):
-            op = self.Move.move(pygame.K_DOWN,self.Prox)    
-            self.x -= op[0]
-            self.y -= op[1]
+
+
+
+
+
+        x = self.x
+        y = self.y
+        op_rank = 0
         if(UP == True):
             op = self.Move.move(pygame.K_UP,self.Prox)    
-            self.x -= op[0]
-            self.y -= op[1]
-        if(LEFT == True):
+            x -= op[0]
+            y -= op[1]
+            op_rank = 1
+        
+        elif(DOWN == True):
+            op = self.Move.move(pygame.K_DOWN,self.Prox)    
+            x -= op[0]
+            y -= op[1]
+            op_rank = 2
+      
+        elif(LEFT == True):
             op = self.Move.move(pygame.K_LEFT,self.Prox)    
-            self.x -= op[0]
-            self.y -= op[1]
+            x -= op[0]
+            y -= op[1]
+            op_rank = 3
 
-        self.x = max(0,self.x)
-        self.y = max(0,self.y)
+        elif(RIGHT == True):
+            op = self.Move.move(pygame.K_RIGHT,self.Prox)    
+            x -= op[0]
+            y -= op[1]
+            op_rank = 4
 
-        self.x = min(self.X-20 -self.Player_size,self.x)
-        self.y = min(self.Y-20 -self.Player_size,self.y)
+        x = max(0.5*self.Player_size,x)
+        y = max(0.5*self.Player_size,y)
+        x = min(self.X -2.5*self.Player_size ,x)
+        y = min(self.Y -2.5*self.Player_size,y)
+        center_x = x+len(self.name)*2+self.Player_size/2
+        center_y = y+self.Player_size/2+self.Player_size/2
+        have_boom,std_x,std_y = self.view.fix(center_x,center_y)
 
-        self.center_x = self.x+len(self.name)*2+self.Player_size/2
-        self.center_y = self.y+20+self.Player_size/2
+        if op_rank and not self.check_corss(center_x,center_y,op_rank):
+            self.center_x = std_x
+            self.center_y = std_y
+            self.x = x
+            self.y = y
 
         if(SPACE == True) and self.state == 'Move' :
             if self.Prox.boom_num < self.Prox.max_boom_num :
-                self.state = 'Boom'
-                self.Prox.boom_num += 1
-                curBoom = Boom.Boom(self.center_x,self.center_y,self)
-                self.Attack(curBoom)
+                # have_boom,std_x,std_y = self.view.fix(self.center_x,self.center_y)
+                if not have_boom:
+                    self.state = 'Boom'
+                    self.Prox.boom_num += 1
+                    curBoom = Boom.Boom(std_x,std_y,self)
+                    self.Attack(curBoom)
 
         if self.state == 'Boom' and (SPACE == False):
             self.state = 'Move'
-        print(key,self.x,self.y)
 
     def DrawPlayer(self,screen):
 
@@ -141,8 +169,6 @@ class AI_Player(object):
         
         width = 1
         pygame.draw.rect( screen, mycolcor, position, width )
-
-        # print(self.center_x,self.center_y)
 
     def Attack(self,boom):
         config.get_global_BoomQueue().recive(boom)

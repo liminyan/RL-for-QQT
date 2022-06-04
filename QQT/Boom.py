@@ -1,5 +1,7 @@
 import config,time
 import pygame
+import view
+
 class Boom(object):
     """docstring for Boom"""
     def __init__(self, x,y,player):
@@ -9,9 +11,10 @@ class Boom(object):
         self.begin_time = None
         self.boom_begin_time = None
         self.state = 'Live'
-        self.boom_time = 1.5
+        self.boom_time = 0.125
         self.player = player
         self.drawboom = False
+        self.power = player.Prox.power
 
     def set_begin_time(self):
         self.begin_time = time.time()
@@ -20,7 +23,8 @@ class Boom(object):
         end = time.time()
 
         if self.state == 'Boom':
-            if end - self.begin_time >= self.boom_time:
+            if end - self.boom_begin_time >= self.boom_time:
+                print(end - self.boom_begin_time,self.boom_time)
                 self.state = 'Dead'
                 return    self.state  
         if end - self.begin_time >= self.time:
@@ -47,6 +51,8 @@ class BoomQueue(object):
         self.X = X
         self.Y = Y
         self.Player_size = Player_size
+        self.view = view.View(X,Y,Player_size)
+        self.Boomd = {}
 
     def recive(self,boom):
 
@@ -59,6 +65,10 @@ class BoomQueue(object):
             boom.update()
             if boom.state == 'Dead':
                 self.Booml.remove(boom)
+
+    def viewupdate(self,global_player):
+        self.view.update(self,global_player)
+
         
     def DrawBoom(self,boom,screen):
         clolor = config.get_bar_color()
@@ -66,13 +76,21 @@ class BoomQueue(object):
         radius = self.Player_size /2
         width = 2
         pygame.draw.circle( screen, clolor, position, radius, width )
+        tex = pygame.font.SysFont('宋体',size = 25)
+        cur = time.time()
+        begin = boom.begin_time 
+        exist = boom.time
+        rest_num = round(exist - (cur - begin),1)
+
+        tex_fmt = tex.render(str(rest_num),1,'white')
+        screen.blit(tex_fmt,(boom.x,boom.y))
 
     def DrawBoom_Boom(self,boom,screen):
 
         mycolcor =config.get_boom_color()
         center_x,center_y = boom.x , boom.y
 
-        power = boom.player.Prox.power
+        power = boom.power
         size = self.Player_size
         width = 0
 
@@ -92,30 +110,39 @@ class BoomQueue(object):
         left,up = max(int(center_x-size/2),0) ,max(int(center_y-size/2),0)
         right,down = int(center_x+size/2) ,int(center_y+size/2)
 
-        for x in range(left,right,5):
-            for y in range(up,down,5):
+        for x in range(left,right,int(self.Player_size*0.2)):
+            for y in range(up,down,int(self.Player_size*0.2)):
                 if screen.get_at((x,y)) == config.get_boom_color():
                     return 'Dead'
 
         return 'Live'
 
+    def expend(self,boom):
+        for _ in self.Booml:
+            if _.state == 'Live':
+                if _.x == boom.x:
+                    if abs(_.y - boom.y) <= boom.power * self.Player_size:
+                        _.state = 'Boom'
+                        _.boom_begin_time = time.time()
+                        self.expend(_)
+                elif _.y == boom.y:
+                    if abs(_.x - boom.x) <= boom.power * self.Player_size:
+                        _.state = 'Boom'
+                        _.boom_begin_time = time.time()
+                        self.expend(_)
 
 
     def DrawBooml(self,screen):
-        for _ in self.Booml:
-            for boom in self.Booml:
-                if boom.state == 'Live':
-                    if self.check_boom(boom.x , boom.y,screen) == "Dead":
-                    	boom.state = 'Boom'
-                    if boom.state == 'Boom':
-                        boom.boom_begin_time = time.time()
+        for boom in self.Booml:
+            if boom.state == 'Boom':
+                self.expend(boom)
 
-                if boom.state == 'Live':
-                    self.DrawBoom(boom,screen)
+        for boom in self.Booml:
+            if boom.state == 'Live':
+                self.DrawBoom(boom,screen)
 
-                if boom.state == 'Boom' and boom.drawboom == False:
-                    boom.drawboom == True
-                    self.DrawBoom_Boom(boom,screen)                
+            if boom.state == 'Boom':
+                self.DrawBoom_Boom(boom,screen)  
 
     def check_player(self,screen):
         for player in config.get_global_player():
