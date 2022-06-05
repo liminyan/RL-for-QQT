@@ -63,16 +63,16 @@ class Player(object):
             res = abs(op[op_rank-1][1] - tr_y)
             
             if tr_x - int(tr_x) < 0.25 :
-                extern = self.view.map[int(std_x) - 1][int(op[op_rank - 1][1])]
+                extern = self.view.map[int(std_x) - 1][int(op[op_rank - 1][1])] == 1
             elif tr_x - int(tr_x) > 0.75 :
-                extern = self.view.map[int(std_x) + 1][int(op[op_rank - 1][1])]
+                extern = self.view.map[int(std_x) + 1][int(op[op_rank - 1][1])] == 1
         else:
             if tr_y - int(tr_y) < 0.25 :
-                extern =  self.view.map[int(op[op_rank - 1][0])][int(std_y) - 1]
+                extern =  self.view.map[int(op[op_rank - 1][0])][int(std_y) - 1] == 1
             elif tr_y - int(tr_y) > 0.75 :
-                extern =  self.view.map[int(op[op_rank - 1][0])][int(std_y) + 1]
+                extern =  self.view.map[int(op[op_rank - 1][0])][int(std_y) + 1] == 1
             res = abs(op[op_rank-1][0] - tr_x)
-        return res < 0.8 and (self.view.map[int(op[op_rank-1][0])][int(op[op_rank-1][1])] or extern)
+        return res < 0.8 and (self.view.map[int(op[op_rank-1][0])][int(op[op_rank-1][1])] == 1 or extern)
 
 
     def move(self):
@@ -113,7 +113,6 @@ class Player(object):
 
         x = max(0.5*self.Player_size,x)
         y = max(0.5*self.Player_size,y)
-
         x = min(self.X -2.5*self.Player_size ,x)
         y = min(self.Y -2.5*self.Player_size,y)
         center_x = self.x+len(self.name)*2+self.Player_size/2
@@ -159,6 +158,5 @@ class Player(object):
 
     def Attack(self,boom):
         config.get_global_BoomQueue().recive(boom)
-
 
 

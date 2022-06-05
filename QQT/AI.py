@@ -19,21 +19,20 @@ class AI_Player(object):
         if mode == None:
             self.x,self.y = 0,0
         if mode == 'r':
-            self.x = random.randint(0,self.X-20 -Player_size)
-            self.y = random.randint(0,self.Y-20 -Player_size)
+            self.x = random.randint(0,self.X- Player_size/2  -Player_size)
+            self.y = random.randint(0,self.Y- Player_size/2  -Player_size)
 
         self.show_name = True
         self.Player_size = Player_size
         self.center_x = self.x+len(self.name)*2+Player_size/2
-        self.center_y = self.y+20+Player_size/2
+        self.center_y = self.y+ Player_size/2 +Player_size/2
         self.state = 'Move'
         self.bias = ''
         self.first = time.time()
         self.space = time.time()
         self.key = 0
         self.view = view.View(X,Y,Player_size)
-
-
+        self.Reward = 0
 
     def check_corss(self,x,y,op_rank):
         # up down left right 1,2,3,4
@@ -52,35 +51,34 @@ class AI_Player(object):
             res = abs(op[op_rank-1][1] - tr_y)
             
             if tr_x - int(tr_x) < 0.25 :
-                extern = self.view.map[int(std_x) - 1][int(op[op_rank - 1][1])]
+                extern = self.view.map[int(std_x) - 1][int(op[op_rank - 1][1])] == 1
             elif tr_x - int(tr_x) > 0.75 :
-                extern = self.view.map[int(std_x) + 1][int(op[op_rank - 1][1])]
+                extern = self.view.map[int(std_x) + 1][int(op[op_rank - 1][1])] == 1
         else:
             if tr_y - int(tr_y) < 0.25 :
-                extern =  self.view.map[int(op[op_rank - 1][0])][int(std_y) - 1]
+                extern =  self.view.map[int(op[op_rank - 1][0])][int(std_y) - 1] == 1
             elif tr_y - int(tr_y) > 0.75 :
-                extern =  self.view.map[int(op[op_rank - 1][0])][int(std_y) + 1]
+                extern =  self.view.map[int(op[op_rank - 1][0])][int(std_y) + 1] == 1
             res = abs(op[op_rank-1][0] - tr_x)
-        return res < 0.8 and (self.view.map[int(op[op_rank-1][0])][int(op[op_rank-1][1])] or extern)
+        return res < 0.8 and (self.view.map[int(op[op_rank-1][0])][int(op[op_rank-1][1])] == 1 or extern)
 
 
 
-    def move(self):
+    def get_cur_state(self):
 
-        if self.state == "Dead" :
-            self.bias ='[Dead]'
-            return
+        
 
+
+    def get_rand_atcion(self):
         key = self.key
         if time.time() - self.first >=0.1:
-	        key = random.randint(0,5)
-	        self.first = time.time()
-
+            key = random.randint(0,5)
+            self.first = time.time()
         STOP = True
-        LEFT = False
         UP = False
-        RIGHT = False
         DOWN = False
+        LEFT = False
+        RIGHT = False
         SPACE = False
         if key == 0:
             STOP = True
@@ -94,18 +92,23 @@ class AI_Player(object):
             DOWN = True
         self.key = key
         if time.time() - self.space >=0.4 or key == 5:
-	        key = random.randint(0,5)
-	        self.space = time.time() 
+            key = random.randint(0,5)
+            self.space = time.time() 
         if key ==  5:
             SPACE = True
 
+        return STOP,UP,DOWN,LEFT,RIGHT,SPACE
 
+    def move(self):
 
-
-
-
+        if self.state == "Dead" :
+            self.bias ='[Dead]'
+            return
         x = self.x
         y = self.y
+
+        STOP,UP,DOWN,LEFT,RIGHT,SPACE = self.get_rand_atcion()
+
         op_rank = 0
         if(UP == True):
             op = self.Move.move(pygame.K_UP,self.Prox)    
@@ -165,7 +168,7 @@ class AI_Player(object):
             screen.blit(tex_fmt,(self.x,self.y))
 
         mycolcor = (255, 0, 0)
-        position = ( self.x+len(self.name+self.bias)*2, self.y+20, self.Player_size, self.Player_size )
+        position = ( self.x+len(self.name+self.bias)*2, self.y+ self.Player_size/2 , self.Player_size, self.Player_size )
         
         width = 1
         pygame.draw.rect( screen, mycolcor, position, width )

@@ -24,7 +24,6 @@ class Boom(object):
 
         if self.state == 'Boom':
             if end - self.boom_begin_time >= self.boom_time:
-                print(end - self.boom_begin_time,self.boom_time)
                 self.state = 'Dead'
                 return    self.state  
         if end - self.begin_time >= self.time:
@@ -54,11 +53,13 @@ class BoomQueue(object):
         self.view = view.View(X,Y,Player_size)
         self.Boomd = {}
 
+    def get_boom_num(self):
+        return len(self.Booml)
+
     def recive(self,boom):
 
         boom.set_begin_time()
         self.Booml.append(boom)
-        print(len(self.Booml),boom.player.state)
 
     def update(self):
         for boom in self.Booml:
