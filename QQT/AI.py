@@ -33,6 +33,7 @@ class AI_Player(object):
         self.key = 0
         self.view = view.View(X,Y,Player_size)
         self.Reward = 0
+        self.view_size = 5
 
     def check_corss(self,x,y,op_rank):
         # up down left right 1,2,3,4
@@ -66,10 +67,34 @@ class AI_Player(object):
 
     def get_cur_state(self):
 
+        view_size = self.view_size
+        state_view = np.ones((view_size,view_size))
+        std_x,std_y= int(self.center_x/self.Player_size),int(self.center_y/self.Player_size)
+        shape = self.view.map.shape
+        len_size = int((view_size-1)/2)
+        view_x = 0
+        view_y = 0
+        tmpx = std_x - len_size
+        tmpy = std_y - len_size
+        begin_x = max(0,tmpx)
+        begin_y = max(0,tmpy)
+        if tmpx < 0:
+            view_x -= tmpx
+        if tmpy < 0:
+            view_y -= tmpy
+        end_x = min(shape[0]-1,std_x + len_size)
+        end_y = min(shape[1]-1,std_y + len_size)
+        len_x_size  = end_x - begin_x + 1
+        len_y_size  = end_y - begin_y + 1
+        state_view[view_x:view_x+len_x_size,view_y:view_y+len_y_size] = self.view.map[begin_x:begin_x+len_x_size,begin_y:begin_y+len_y_size]
+        # print(state_view.T)
+        return state_view
         
-
-
     def get_rand_atcion(self):
+
+
+        state_view = self.get_cur_state()
+
         key = self.key
         if time.time() - self.first >=0.1:
             key = random.randint(0,5)

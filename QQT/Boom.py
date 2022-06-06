@@ -1,6 +1,7 @@
 import config,time
 import pygame
 import view
+import numpy as np
 
 class Boom(object):
     """docstring for Boom"""
@@ -51,7 +52,9 @@ class BoomQueue(object):
         self.Y = Y
         self.Player_size = Player_size
         self.view = view.View(X,Y,Player_size)
-        self.Boomd = {}
+        self.Bdict = {}
+        self.visit = {}
+        self.BoomView = np.zeros((int(X/Player_size),int(Y/Player_size)))
 
     def get_boom_num(self):
         return len(self.Booml)
@@ -106,17 +109,75 @@ class BoomQueue(object):
         pygame.draw.rect( screen, mycolcor, position, width )
       
 
-    def check_boom (self,center_x,center_y,screen):
-        size = self.Player_size
-        left,up = max(int(center_x-size/2),0) ,max(int(center_y-size/2),0)
-        right,down = int(center_x+size/2) ,int(center_y+size/2)
+    def expend_view(self,boom,exist = -1):
+        if boom.state == "Dead":
+            return
 
-        for x in range(left,right,int(self.Player_size*0.2)):
-            for y in range(up,down,int(self.Player_size*0.2)):
-                if screen.get_at((x,y)) == config.get_boom_color():
-                    return 'Dead'
+        power = boom.power
+        shape = self.view.map.shape
+        if exist == -1:
+            cur = time.time()
+            begin = boom.begin_time 
+            exist = round((cur - begin),1)
 
-        return 'Live'
+        if boom.state == 'Boom':
+            exist = boom.time
+        # up
+        cur_x,cur_y = int(boom.x/self.Player_size),int(boom.y/self.Player_size)
+        self.BoomView[cur_x][cur_y] = max(self.BoomView[cur_x][cur_y],exist)
+        for x in range(0,power):
+            if cur_x - 1 >= 0:
+                cur_x-=1
+                key = str(cur_x)+'_' +str(cur_y)
+                self.BoomView[cur_x][cur_y] = max(self.BoomView[cur_x][cur_y],exist)
+                if key in self.Bdict and self.visit[self.Bdict[key]] == 0:
+                    self.visit[self.Bdict[key]] = 1
+                    self.expend_view(self.Bdict[key],exist = exist)
+        # down
+        cur_x,cur_y = int(boom.x/self.Player_size),int(boom.y/self.Player_size)
+        for x in range(0,power):
+            if cur_x + 1 < shape[0]:
+                cur_x+=1
+                key = str(cur_x)+'_' +str(cur_y)
+                self.BoomView[cur_x][cur_y] = max(self.BoomView[cur_x][cur_y],exist)
+                if key in self.Bdict and self.visit[self.Bdict[key]] == 0:
+                    self.visit[self.Bdict[key]] = 1
+                    self.expend_view(self.Bdict[key],exist = exist)
+        # left
+        cur_x,cur_y = int(boom.x/self.Player_size),int(boom.y/self.Player_size)
+        for y in range(0,power):
+            if cur_y - 1 >= 0:
+                cur_y-=1
+                key = str(cur_x)+'_' +str(cur_y)
+                self.BoomView[cur_x][cur_y] = max(self.BoomView[cur_x][cur_y],exist)
+                if key in self.Bdict and self.visit[self.Bdict[key]] == 0:
+                    self.visit[self.Bdict[key]] = 1
+                    self.expend_view(self.Bdict[key],exist = exist)
+        # right
+        cur_x,cur_y = int(boom.x/self.Player_size),int(boom.y/self.Player_size)
+        for y in range(0,power):
+            if cur_y + 1 < shape[1]:
+                cur_y +=1
+                key = str(cur_x)+'_' +str(cur_y)
+                self.BoomView[cur_x][cur_y] = max(self.BoomView[cur_x][cur_y],exist)
+                if key in self.Bdict and self.visit[self.Bdict[key]] == 0:
+                    self.visit[self.Bdict[key]] = 1
+                    self.expend_view(self.Bdict[key],exist = exist)
+                    
+    def boom_view(self):
+        self.Bdict = {}
+        for boom in self.Booml:
+            self.visit[boom] = 0
+            std_x,std_y = int(boom.x/self.Player_size),int(boom.y/self.Player_size)
+            key = str(std_x)+'_' +str(std_y)
+            self.Bdict[key] = boom
+
+        for boom in self.Booml:
+            if self.visit[boom] == 0:
+                self.expend_view(boom,exist = -1)
+
+    def clear_boom_view(self):
+        self.BoomView *= 0
 
     def expend(self,boom):
         for _ in self.Booml:
@@ -132,24 +193,26 @@ class BoomQueue(object):
                         _.boom_begin_time = time.time()
                         self.expend(_)
 
-
     def DrawBooml(self,screen):
         for boom in self.Booml:
             if boom.state == 'Boom':
                 self.expend(boom)
-
         for boom in self.Booml:
             if boom.state == 'Live':
                 self.DrawBoom(boom,screen)
-
             if boom.state == 'Boom':
                 self.DrawBoom_Boom(boom,screen)  
 
     def check_player(self,screen):
+        self.boom_view()
         for player in config.get_global_player():
             if player.state != 'Dead':
-                cur = self.check_boom(player.center_x , player.center_y,screen)
-                if cur == 'Dead':
-                	player.state = cur
+                cur_x,cur_y = int(player.center_x/self.Player_size),int(player.center_y/self.Player_size)
+                if self.BoomView[cur_x][cur_y] == 5:
+                	player.state = 'Dead'
+            player.BoomView = self.BoomView.copy()
+        self.clear_boom_view()
+
+
                 
 

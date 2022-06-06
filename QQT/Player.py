@@ -45,6 +45,47 @@ class Player(object):
         self.X = X
         self.Y = Y
         self.view = view.View(X,Y,Player_size)
+        self.BoomView = np.zeros((int(X/Player_size),int(Y/Player_size)))
+        self.view_size = 5
+
+
+    def get_cur_state(self):
+
+        view_size = self.view_size
+        total_view = np.ones((2,view_size,view_size))
+        state_view = total_view[0]
+        total_view[1] *= 5
+        Boom_view = total_view[1]
+
+
+        std_x,std_y= int(self.center_x/self.Player_size),int(self.center_y/self.Player_size)
+        shape = self.view.map.shape
+
+        len_size = int((view_size-1)/2)
+
+        view_x = 0
+        view_y = 0
+
+        tmpx = std_x - len_size
+        tmpy = std_y - len_size
+        begin_x = max(0,tmpx)
+        begin_y = max(0,tmpy)
+
+        if tmpx < 0:
+            view_x -= tmpx
+
+        if tmpy < 0:
+            view_y -= tmpy
+
+        end_x = min(shape[0]-1,std_x + len_size)
+        end_y = min(shape[1]-1,std_y + len_size)
+        len_x_size  = end_x - begin_x + 1
+        len_y_size  = end_y - begin_y + 1
+        state_view[view_x:view_x+len_x_size,view_y:view_y+len_y_size] = self.view.map[begin_x:begin_x+len_x_size,begin_y:begin_y+len_y_size]
+        Boom_view[view_x:view_x+len_x_size,view_y:view_y+len_y_size] = self.BoomView[begin_x:begin_x+len_x_size,begin_y:begin_y+len_y_size]
+
+        print(Boom_view.T)
+        return total_view
 
     def check_corss(self,x,y,op_rank):
         # up down left right 1,2,3,4
@@ -140,6 +181,7 @@ class Player(object):
 
     def DrawPlayer(self,screen):
 
+        self.get_cur_state()
         if self.show_name:
             tex = pygame.font.SysFont('宋体',size = 25)
             tex_fmt = tex.render(self.name+self.bias,1,'white')
